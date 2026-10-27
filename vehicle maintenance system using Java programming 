@@ -1,0 +1,177 @@
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Scanner;
+
+// --- Data Entities ---
+class Vehicle {
+    String ownerName, licensePlate, makeAndModel;
+    public Vehicle(String owner, String plate, String make) {
+        this.ownerName = owner; this.licensePlate = plate; this.makeAndModel = make;
+    }
+}
+
+class JobCard {
+    String jobId;
+    Vehicle vehicle;
+    String status;
+    double partsCost = 0.0;
+    double laborCost = 600.0; // Default flat labor fee
+    boolean isPaid = false;
+
+    public JobCard(String id, Vehicle v) {
+        this.jobId = id; this.vehicle = v; this.status = "Pending";
+    }
+}
+
+// --- Main System ---
+public class Main {
+    static Scanner scanner = new Scanner(System.in);
+    static boolean isLoggedIn = false;
+    
+    // Simulated Database Tables
+    static List<Vehicle> vehicles = new ArrayList<>();
+    static List<JobCard> jobCards = new ArrayList<>();
+    static int nextJobId = 101;
+    static double totalRevenue = 0.0;
+
+    public static void main(String[] args) {
+        boolean running = true;
+        System.out.println("=========================================");
+        System.out.println("   JAVA VEHICLE MAINTENANCE SYSTEM       ");
+        System.out.println("=========================================");
+
+        while (running) {
+            System.out.println("\nSelect a Module:");
+            System.out.println("1. Auth | 2. Register | 3. Schedule | 4. Job Card");
+            System.out.println("5. Inventory | 6. Billing | 7. Reports | 8. Exit");
+            System.out.print("Choice: ");
+            
+            int choice = scanner.nextInt();
+            scanner.nextLine(); // Consume newline
+
+            // Security check
+            if (choice > 1 && choice < 8 && !isLoggedIn) {
+                System.out.println("⚠️ Please login (Option 1) first.");
+                continue;
+            }
+
+            switch (choice) {
+                case 1: moduleAuth(); break;
+                case 2: moduleRegister(); break;
+                case 3: moduleSchedule(); break;
+                case 4: moduleJobCard(); break;
+                case 5: moduleInventory(); break;
+                case 6: moduleBilling(); break;
+                case 7: moduleReports(); break;
+                case 8: running = false; System.out.println("Goodbye!"); break;
+                default: System.out.println("Invalid choice.");
+            }
+        }
+    }
+
+    // --- MODULE 1: Auth ---
+    static void moduleAuth() {
+        System.out.print("Username: "); String u = scanner.nextLine();
+        System.out.print("Password: "); String p = scanner.nextLine();
+        if (u.equals("admin") && p.equals("admin123")) {
+            isLoggedIn = true; System.out.println("✅ Login Successful!");
+        } else {
+            System.out.println("❌ Invalid credentials.");
+        }
+    }
+
+    // --- MODULE 2: Registration ---
+    static void moduleRegister() {
+        System.out.print("Owner Name: "); String name = scanner.nextLine();
+        System.out.print("License Plate: "); String plate = scanner.nextLine();
+        System.out.print("Make & Model: "); String make = scanner.nextLine();
+        vehicles.add(new Vehicle(name, plate, make));
+        System.out.println("✅ Vehicle Registered.");
+    }
+
+    // --- MODULE 3: Scheduling ---
+    static void moduleSchedule() {
+        System.out.print("Enter License Plate to schedule: "); String plate = scanner.nextLine();
+        for (Vehicle v : vehicles) {
+            if (v.licensePlate.equalsIgnoreCase(plate)) {
+                String id = "JOB-" + (nextJobId++);
+                jobCards.add(new JobCard(id, v));
+                System.out.println("✅ Scheduled! Job ID created: " + id);
+                return;
+            }
+        }
+        System.out.println("❌ Vehicle not found. Register it first.");
+    }
+
+    // --- MODULE 4: Job Card ---
+    static void moduleJobCard() {
+        JobCard job = findJobCard();
+        if (job != null) {
+            System.out.println("Current Status: " + job.status);
+            System.out.print("Enter new status (e.g., In-Progress, Completed): ");
+            job.status = scanner.nextLine();
+            System.out.println("✅ Status updated to: " + job.status);
+        }
+    }
+
+    // --- MODULE 5: Inventory ---
+    static void moduleInventory() {
+        JobCard job = findJobCard();
+        if (job != null) {
+            System.out.println("Available Parts: 1. Engine Oil (Rs 1100) | 2. Oil Filter (Rs 350) | 3. Brake Pads (Rs 800)");
+            System.out.print("Select part to add (1-3): ");
+            int part = scanner.nextInt(); scanner.nextLine();
+            
+            if (part == 1) job.partsCost += 1100;
+            else if (part == 2) job.partsCost += 350;
+            else if (part == 3) job.partsCost += 800;
+            
+            System.out.println("✅ Part added to Job Card. Parts Total: Rs " + job.partsCost);
+        }
+    }
+
+    // --- MODULE 6: Billing ---
+    static void moduleBilling() {
+        JobCard job = findJobCard();
+        if (job != null && !job.isPaid) {
+            double subtotal = job.partsCost + job.laborCost;
+            double tax = subtotal * 0.18; // 18% Tax
+            double total = subtotal + tax;
+
+            System.out.println("\n--- INVOICE FOR " + job.jobId + " ---");
+            System.out.println("Vehicle: " + job.vehicle.makeAndModel);
+            System.out.println("Parts: Rs " + job.partsCost);
+            System.out.println("Labor: Rs " + job.laborCost);
+            System.out.println("Tax (18%): Rs " + tax);
+            System.out.println("TOTAL DUE: Rs " + total);
+            
+            System.out.print("Mark as Paid? (Y/N): ");
+            if (scanner.nextLine().equalsIgnoreCase("Y")) {
+                job.isPaid = true;
+                totalRevenue += total;
+                System.out.println("✅ Invoice Paid.");
+            }
+        } else if (job != null) {
+            System.out.println("⚠️ This job is already paid.");
+        }
+    }
+
+    // --- MODULE 7: Reports ---
+    static void moduleReports() {
+        System.out.println("\n--- GARAGE PERFORMANCE ---");
+        System.out.println("Total Vehicles Registered: " + vehicles.size());
+        System.out.println("Total Jobs Created: " + jobCards.size());
+        System.out.println("Total Revenue Collected: Rs " + totalRevenue);
+    }
+
+    // Helper Method
+    static JobCard findJobCard() {
+        System.out.print("Enter Job ID (e.g., JOB-101): ");
+        String searchId = scanner.nextLine();
+        for (JobCard j : jobCards) {
+            if (j.jobId.equalsIgnoreCase(searchId)) return j;
+        }
+        System.out.println("❌ Job Card not found.");
+        return null;
+    }
+}
